@@ -1,0 +1,12 @@
+
+pub struct* TestData({
+  P: F64,
+  S: F64,
+  K: F64,
+  ttm: F64,
+  iv: F64,
+  r: F64,
+  q: F64,
+  cp: String,
+  n: N32,
+});

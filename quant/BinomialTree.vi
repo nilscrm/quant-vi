@@ -1,0 +1,73 @@
+
+pub enum* OptionType {
+  Call(),
+  Put(),
+}
+
+pub fn price(
+  S: F64,
+  K: F64,
+  option_type: OptionType,
+  ttm: F64,
+  iv: F64,
+  r: F64,
+  q: F64,
+  n_steps: N32,
+) -> F64 {
+  let dt: F64 = ttm / n_steps as F64;
+  let up: F64 = (iv * dt.sqrt()).exp();
+  let down: F64 = 1.0[F64] / up;
+  let p: F64 = (((r - q) * dt).exp() - down) / (up - down);
+  let disc: F64 = (-r * dt).exp();
+  let dp: F64 = disc * p;
+  let d1p: F64 = disc * (1.0[F64] - p);
+  let log_u: F64 = up.ln();
+  let lsu: F64 = -n_steps as F64 * log_u + S.ln();
+  let s: F64 = match option_type {
+    OptionType::Call() { 1.0[F64] }
+    OptionType::Put() { -1.0[F64] }
+  };
+  let sK: F64 = K * -s;
+
+  let prices_even = [];
+  let prices_odd = [];
+
+  for i in 0..=n_steps {
+    let p = s * ((2 * i) as F64 * log_u + lsu).exp() + sK;
+    if p > 0.0[F64] {
+      prices_even.push_back(p);
+    } else {
+      prices_even.push_back(0.0[F64]);
+    }
+    let p = s * ((2 * i + 1) as F64 * log_u + lsu).exp() + sK;
+    if p > 0.0[F64] {
+      prices_odd.push_back(p);
+    } else {
+      prices_odd.push_back(0.0[F64]);
+    }
+  }
+
+  let values = prices_even;
+
+  for i in 1..=n_steps {
+    let &exercise = if i & 1 == 1 {
+      &prices_odd
+    } else {
+      &prices_even
+    };
+    // offset within ex
+    let o: N32 = i >> 1;
+
+    for j in 0..=(n_steps - i) {
+      let held: F64 = dp * values.get(j + 1).assume() + d1p * values.get(j).assume();
+      let exercised: F64 = exercise.get(o + j).assume();
+      if exercised > held {
+        *values.at(j).assume() = exercised;
+      } else {
+        *values.at(j).assume() = held;
+      }
+    }
+  }
+
+  return values.pop_front().assume();
+}

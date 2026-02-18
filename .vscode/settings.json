@@ -1,0 +1,6 @@
+{
+  "vine.entrypoints": [
+    "quant/",
+    "test/",
+  ]
+}
