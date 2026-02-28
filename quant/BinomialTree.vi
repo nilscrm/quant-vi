@@ -1,4 +1,6 @@
 
+use #root::data::Array;
+
 pub enum* OptionType {
   Call(),
   Put(),
@@ -29,44 +31,117 @@ pub fn price(
   };
   let sK: F64 = K * -s;
 
-  let prices_even = [];
-  let prices_odd = [];
+  let prices_other = [];
+  let prices = [];
 
   for i in 0..=n_steps {
     let p = s * ((2 * i) as F64 * log_u + lsu).exp() + sK;
     if p > 0.0[F64] {
-      prices_even.push_back(p);
+      prices_other.push_back(p);
     } else {
-      prices_even.push_back(0.0[F64]);
+      prices_other.push_back(0.0[F64]);
     }
     let p = s * ((2 * i + 1) as F64 * log_u + lsu).exp() + sK;
     if p > 0.0[F64] {
-      prices_odd.push_back(p);
+      prices.push_back(p);
     } else {
-      prices_odd.push_back(0.0[F64]);
+      prices.push_back(0.0[F64]);
     }
   }
 
-  let values = prices_even;
+  let values = prices_other;
 
-  for i in 1..=n_steps {
-    let &exercise = if i & 1 == 1 {
-      &prices_odd
-    } else {
-      &prices_even
-    };
-    // offset within ex
-    let o: N32 = i >> 1;
-
-    for j in 0..=(n_steps - i) {
-      let held: F64 = dp * values.get(j + 1).assume() + d1p * values.get(j).assume();
-      let exercised: F64 = exercise.get(o + j).assume();
-      if exercised > held {
-        *values.at(j).assume() = exercised;
+  for _ in 0..n_steps {
+    let val_down = values.pop_front().assume();
+    for (&exercised, &val_up) in prices.iter_ref().zip(values.iter_ref()) {
+      let held = dp * val_up + d1p * val_down;
+      val_down = val_up;
+      val_up = if exercised > held {
+        exercised
       } else {
-        *values.at(j).assume() = held;
-      }
+        held
+      };
     }
+    (prices, prices_other) = (prices_other, prices);
+    prices.pop_front();
+  }
+
+  return values.pop_front().assume();
+}
+
+pub fn price_array(
+  S: F64,
+  K: F64,
+  option_type: OptionType,
+  ttm: F64,
+  iv: F64,
+  r: F64,
+  q: F64,
+  n_steps: N32,
+) -> F64 {
+  let dt: F64 = ttm / n_steps as F64;
+  let up: F64 = (iv * dt.sqrt()).exp();
+  let down: F64 = 1.0[F64] / up;
+  let p: F64 = (((r - q) * dt).exp() - down) / (up - down);
+  let disc: F64 = (-r * dt).exp();
+  let dp: F64 = disc * p;
+  let d1p: F64 = disc * (1.0[F64] - p);
+  let log_u: F64 = up.ln();
+  let lsu: F64 = -n_steps as F64 * log_u + S.ln();
+  let s: F64 = match option_type {
+    OptionType::Call() { 1.0[F64] }
+    OptionType::Put() { -1.0[F64] }
+  };
+  let sK: F64 = K * -s;
+
+  let prices_other = [];
+  let prices = [];
+
+  for i in 0..=n_steps {
+    let p = s * ((2 * i) as F64 * log_u + lsu).exp() + sK;
+    if p > 0.0[F64] {
+      prices_other.push_back(p);
+    } else {
+      prices_other.push_back(0.0[F64]);
+    }
+    let p = s * ((2 * i + 1) as F64 * log_u + lsu).exp() + sK;
+    if p > 0.0[F64] {
+      prices.push_back(p);
+    } else {
+      prices.push_back(0.0[F64]);
+    }
+  }
+
+  let prices = prices as Array;
+  prices.pop_back();
+  let prices_other = prices_other as Array;
+
+  let values = prices_other;
+
+  for _ in 0..n_steps {
+    let val_down = values;
+    val_down.pop_back();
+    let val_up = values;
+    val_up.pop_front();
+    let held = Array::zip_with(
+      val_down,
+      val_up,
+      fn* (val_down: F64, val_up: F64) { dp * val_up + d1p * val_down },
+    );
+    values = Array::zip_with(
+      held,
+      prices,
+      fn* (held: F64, exercised: F64) {
+        if exercised > held {
+          exercised
+        } else {
+          held
+        }
+      },
+    );
+    (prices, prices_other) = (prices_other, prices);
+    prices.pop_front();
+    prices.pop_back();
   }
 
   return values.pop_front().assume();

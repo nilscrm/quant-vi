@@ -1,3 +1,21 @@
 
 pub mod BinomialTree;
 pub mod util;
+
+use BinomialTree::OptionType;
+
+pub fn main(&io: &IO) {
+  let _ = main;
+  io.println("{
+    BinomialTree::price(
+      100.000000000000[F64],
+      100.000000000000[F64],
+      OptionType::Call(),
+      1.000000000000[F64],
+      0.200000000000[F64],
+      0.050000000000[F64],
+      0.000000000000[F64],
+      2048,
+    )
+  }");
+}

@@ -43,11 +43,7 @@ pub fn main(&io: &IO) {
       test_data.q,
       test_data.n_steps,
     );
-    if price == test_data.price {
-      io.println("PASS: {test_data.label}");
-    } else {
-      io.println("FAIL: {test_data.label}, expected {test_data.price}, got {price}");
-    }
+    io.println("{test_data.label}: expected {test_data.price}, got {price}");
   }
 }
 
