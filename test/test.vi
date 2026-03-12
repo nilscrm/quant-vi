@@ -1,5 +1,4 @@
 
-use #root::debug;
 use #quant::BinomialTree::{OptionType, price};
 
 pub struct* TestData({
@@ -60,7 +59,8 @@ pub fn main(&io: &IO) {
   }
   io.println("{passed} / {num_tests} cases passed");
   if passed != num_tests {
-    debug::error("test failed");
+    // This produces a non-zero exit code.
+    return safe #root::util::erase(&io);
   }
 }
 
