@@ -1,49 +1,53 @@
 
+use #root::ops::{Cast, arithmetic::{Add, Div, Mul, Neg, Sub}, comparison::Lt};
+
 pub enum* OptionType {
   Call(),
   Put(),
 }
 
-pub fn price(
-  S: F64,
-  K: F64,
-  option_type: OptionType,
-  ttm: F64,
-  iv: F64,
-  r: F64,
-  q: F64,
-  n_steps: N32,
-) -> F64 {
-  let dt: F64 = ttm / n_steps as F64;
-  let up: F64 = (iv * dt.sqrt()).exp();
-  let down: F64 = 1.0[F64] / up;
-  let p: F64 = (((r - q) * dt).exp() - down) / (up - down);
-  let disc: F64 = (-r * dt).exp();
-  let dp: F64 = disc * p;
-  let d1p: F64 = disc * (1.0[F64] - p);
-  let log_u: F64 = up.ln();
-  let lsu: F64 = -n_steps as F64 * log_u + S.ln();
-  let s: F64 = match option_type {
-    OptionType::Call() { 1.0[F64] }
-    OptionType::Put() { -1.0[F64] }
+pub fn price[
+  F*;
+  Float[F],
+  Cast[N32, F],
+  Cast[I32, F],
+  Div[F, F, F],
+  Add[F, F, F],
+  Sub[F, F, F],
+  Mul[F, F, F],
+  Neg[F, F],
+  Lt[F];
+](S: F, K: F, option_type: OptionType, ttm: F, iv: F, r: F, q: F, n_steps: N32) -> F {
+  let dt = ttm / n_steps as F;
+  let up = (iv * dt.sqrt()).exp();
+  let down = 1 as F / up;
+  let p = (((r - q) * dt).exp() - down) / (up - down);
+  let disc = (-r * dt).exp();
+  let dp = disc * p;
+  let d1p = disc * (1 as F - p);
+  let log_u = up.ln();
+  let lsu = -n_steps as F * log_u + S.ln();
+  let s = match option_type {
+    OptionType::Call() { 1 as F }
+    OptionType::Put() { -1 as F }
   };
-  let sK: F64 = K * -s;
+  let sK = K * -s;
 
   let prices_other = [];
   let prices = [];
 
   for i in 0..=n_steps {
-    let p = s * ((2 * i) as F64 * log_u + lsu).exp() + sK;
-    if p > 0.0[F64] {
+    let p = s * ((2 * i) as F * log_u + lsu).exp() + sK;
+    if p > 0 as F {
       prices_other.push_back(p);
     } else {
-      prices_other.push_back(0.0[F64]);
+      prices_other.push_back(0 as F);
     }
-    let p = s * ((2 * i + 1) as F64 * log_u + lsu).exp() + sK;
-    if p > 0.0[F64] {
+    let p = s * ((2 * i + 1) as F * log_u + lsu).exp() + sK;
+    if p > 0 as F {
       prices.push_back(p);
     } else {
-      prices.push_back(0.0[F64]);
+      prices.push_back(0 as F);
     }
   }
 
@@ -65,4 +69,36 @@ pub fn price(
   }
 
   return values.pop_front().assume();
+}
+
+pub trait[F] Float {
+  fn .sqrt(f: F) -> F;
+  fn .exp(f: F) -> F;
+  fn .ln(f: F) -> F;
+}
+
+pub mod Float {
+  pub impl f32: Float[F32] {
+    fn sqrt(f: F32) -> F32 {
+      F32::sqrt(f)
+    }
+    fn exp(f: F32) -> F32 {
+      F32::exp(f)
+    }
+    fn ln(f: F32) -> F32 {
+      F32::ln(f)
+    }
+  }
+
+  pub impl f64: Float[F64] {
+    fn sqrt(f: F64) -> F64 {
+      F64::sqrt(f)
+    }
+    fn exp(f: F64) -> F64 {
+      F64::exp(f)
+    }
+    fn ln(f: F64) -> F64 {
+      F64::ln(f)
+    }
+  }
 }
