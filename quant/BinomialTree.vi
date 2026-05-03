@@ -51,7 +51,7 @@ pub fn price(
 
   for _ in 0..n_steps {
     let val_down = values.pop_front().assume();
-    for (&exercised, &val_up) in prices.iter_ref().zip(values.iter_ref()) {
+    for (&exercised, &val_up) in prices.iter_ref().zip_shortest(values.iter_ref()) {
       let held = dp * val_up + d1p * val_down;
       val_down = val_up;
       val_up = if exercised > held {
